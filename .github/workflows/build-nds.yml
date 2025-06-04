@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up devkitPro
       uses: devkitPro/setup-devkitpro@v1
@@ -19,10 +19,12 @@ jobs:
         devkit: arm
 
     - name: Build NDS
-      run: make -C path/to/your/project
+      run: |
+        cd nds-examples/hello_world
+        make
 
     - name: Upload NDS file
       uses: actions/upload-artifact@v4
       with:
         name: hello_world.nds
-        path: path/to/your/project/hello_world.nds
+        path: nds-examples/hello_world/hello_world.nds
