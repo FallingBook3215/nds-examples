@@ -1,16 +1,28 @@
-name: Test Upload Artifact
+name: Build and Upload NDS
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Create dummy file
-        run: echo "Hello world" > hello.txt
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: hello-artifact
-          path: hello.txt
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up devkitPro
+      uses: devkitPro/setup-devkitpro@v1
+      with:
+        devkit: arm
+
+    - name: Build NDS
+      run: make -C path/to/your/project
+
+    - name: Upload NDS file
+      uses: actions/upload-artifact@v4
+      with:
+        name: hello_world.nds
+        path: path/to/your/project/hello_world.nds
