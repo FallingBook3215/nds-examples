@@ -10,7 +10,7 @@ jobs:
         run: echo "Hello world" > hello.txt
 
       - name: Upload artifact
-        uses: https://github.com/actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: hello-artifact
           path: hello.txt
