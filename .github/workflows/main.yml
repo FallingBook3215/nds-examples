@@ -1,0 +1,30 @@
+name: Build and Upload NDS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up devkitPro
+      uses: devkitPro/setup-devkitpro@v1
+      with:
+        devkit: arm
+
+    - name: Build NDS
+      run: |
+        cd nds-examples/hello_world
+        make
+
+    - name: Upload NDS file
+      uses: actions/upload-artifact@v4
+      with:
+        name: hello_world.nds
+        path: nds-examples/hello_world/hello_world.nds
