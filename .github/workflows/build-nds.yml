@@ -20,10 +20,9 @@ jobs:
       run: |
         curl -L https://devkitpro.org/setup/devkitpro-installer.sh -o setup-devkitpro.sh
         bash setup-devkitpro.sh
-        source /opt/devkitpro/devkitpro-env.sh
 
     - name: Build example
-      shell: bash -l {0}
+      shell: bash
       run: |
         source /opt/devkitpro/devkitpro-env.sh
         cd nds-examples/hello_world
@@ -31,7 +30,7 @@ jobs:
         make
 
     - name: Upload built NDS artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: hello_world.nds
         path: nds-examples/hello_world/hello_world.nds
