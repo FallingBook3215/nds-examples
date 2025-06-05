@@ -19,9 +19,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y wget gnupg
-        wget https://apt.devkitpro.org/devkitpro-keyring.gpg
-        sudo install -o root -g root -m 644 devkitpro-keyring.gpg /usr/share/keyrings/devkitpro.gpg
-        echo "deb [signed-by=/usr/share/keyrings/devkitpro.gpg] https://apt.devkitpro.org/ stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
+        wget https://apt.devkitpro.org/devkitpro-keyring.deb
+        sudo dpkg -i devkitpro-keyring.deb
+        echo "deb https://apt.devkitpro.org/ stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
         sudo apt-get update
         sudo apt-get install -y devkitarm libnds nds-dev
 
