@@ -1,11 +1,11 @@
 name: Build NDS Examples
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
@@ -22,11 +22,18 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y devkitarm libnds nds-dev
 
-    - name: Build All Examples
+    - name: Set environment variables
+      run: |
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+
+    - name: Build NDS examples
       run: |
         for d in */ ; do
           if [ -f "$d/Makefile" ]; then
+            echo "::group::Building $d"
             make -C "$d" || echo "Failed to build $d"
+            echo "::endgroup::"
           fi
         done
 
