@@ -17,8 +17,11 @@ jobs:
 
     - name: Set up devkitPro
       run: |
-        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4D2C4B5A
-        echo "deb https://apt.devkitpro.org/ stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
+        sudo apt-get update
+        sudo apt-get install -y wget gnupg
+        wget https://apt.devkitpro.org/devkitpro-keyring.gpg
+        sudo install -o root -g root -m 644 devkitpro-keyring.gpg /usr/share/keyrings/devkitpro.gpg
+        echo "deb [signed-by=/usr/share/keyrings/devkitpro.gpg] https://apt.devkitpro.org/ stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
         sudo apt-get update
         sudo apt-get install -y devkitarm libnds nds-dev
 
