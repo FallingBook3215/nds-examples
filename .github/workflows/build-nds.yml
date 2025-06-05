@@ -12,37 +12,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up devkitPro
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget gnupg
-        wget https://apt.devkitpro.org/devkitpro-keyring.deb
-        sudo dpkg -i devkitpro-keyring.deb
-        echo "deb https://apt.devkitpro.org/ stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
-        sudo apt-get update
-        sudo apt-get install -y devkitarm libnds nds-dev
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v2
 
-    - name: Set environment variables
+    - name: Build with devkitPro Docker
       run: |
-        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-        echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
-
-    - name: Build NDS examples
-      run: |
-        for d in */ ; do
-          if [ -f "$d/Makefile" ]; then
-            echo "::group::Building $d"
-            make -C "$d" || echo "Failed to build $d"
-            echo "::endgroup::"
-          fi
-        done
+        docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm bash -c "
+          for d in */ ; do
+            if [ -f \$d/Makefile ]; then
+              echo Building \$d
+              make -C \$d || echo Failed to build \$d
+            fi
+          done
+        "
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: nds-builds
-        path: |
-          **/*.nds
+        name: nds-files
+        path: "**/*.nds"
