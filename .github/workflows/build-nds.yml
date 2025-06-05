@@ -1,9 +1,10 @@
-name: Build and Upload NDS
+name: Build NDS Examples
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -11,21 +12,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v3
 
     - name: Set up devkitPro
-      uses: devkitPro/setup-devkitpro@v4
-      with:
-        devkit: arm
-
-    - name: Build NDS
       run: |
-        cd nds-examples/hello_world
-        make
+        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4D2C4B5A
+        echo "deb https://apt.devkitpro.org/ stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
+        sudo apt-get update
+        sudo apt-get install -y devkitarm libnds nds-dev
 
-    - name: Upload NDS file
+    - name: Build All Examples
+      run: |
+        for d in */ ; do
+          if [ -f "$d/Makefile" ]; then
+            make -C "$d" || echo "Failed to build $d"
+          fi
+        done
+
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: hello_world.nds
-        path: nds-examples/hello_world/hello_world.nds
+        name: nds-builds
+        path: |
+          **/*.nds
