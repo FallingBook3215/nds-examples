@@ -6,7 +6,7 @@ INCLUDES := include assets
 
 # DevkitPro include path
 DEVKITPRO ?= /opt/devkitpro
-INCLUDE_DIRS := -I$(INCLUDES) -I$(DEVKITPRO)/libnds/include
+INCLUDE_DIRS := -I$(INCLUDES) -I$(DEVKITPRO)/libnds/include -DARM9
 
 # Image assets
 GFX := assets/Sniff-Cat.png
