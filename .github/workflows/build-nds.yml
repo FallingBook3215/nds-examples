@@ -15,24 +15,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Build with devkitPro Docker (clean libnds reinstall + verify)
+      - name: Build with devkitPro Docker + debug include paths
         run: |
           docker run --pull always --rm \
             -v ${{ github.workspace }}:/home/devkitpro/project \
             -w /home/devkitpro/project \
             devkitpro/devkitarm:20230501 bash -c "
+              echo 'Listing libnds include directory:'
+              ls -l /opt/devkitpro/libnds/include
+
               export DEVKITPRO=/opt/devkitpro
               export PATH=\$DEVKITPRO/devkitARM/bin:\$PATH
-
-              echo '🧼 Cleaning libnds headers...'
-              sudo rm -rf /opt/devkitpro/libnds/include/*
-
-              echo '📦 Updating and reinstalling libnds...'
-              dkp-pacman -Syyu --noconfirm
-              dkp-pacman -S --noconfirm libnds
-
-              echo '🔍 Checking nds.h after reinstall:'
-              head -20 /opt/devkitpro/libnds/include/nds.h
 
               for d in */ ; do
                 if [ -f \$d/Makefile ]; then
