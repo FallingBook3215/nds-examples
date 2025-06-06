@@ -18,9 +18,13 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
+    - name: Debug libnds includes
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm:latest ls -l /opt/devkitpro/libnds/include/calico
+
     - name: Build with devkitPro Docker
       run: |
-        docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm bash -c "
+        docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm:latest bash -c "
           export PATH=/opt/devkitpro/devkitARM/bin:\$PATH
           for d in */ ; do
             if [ -f \$d/Makefile ]; then
