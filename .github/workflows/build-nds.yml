@@ -18,17 +18,25 @@ jobs:
     - name: Set up Docker
       uses: docker/setup-buildx-action@v2
 
+    - name: Pull latest devkitPro Docker image
+      run: docker pull devkitpro/devkitarm:latest
+
     - name: Build with devkitPro Docker
       run: |
-        docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm bash -c "
-          export PATH=/opt/devkitpro/devkitARM/bin:$PATH
-          for d in */ ; do
-            if [ -f \$d/Makefile ]; then
-              echo Building \$d
-              make -C \$d || echo Failed to build \$d
-            fi
-          done
-        "
+        docker run --rm \
+          -v ${{ github.workspace }}:/home/devkitpro/project \
+          -w /home/devkitpro/project \
+          devkitpro/devkitarm:latest bash -c "
+            export PATH=/opt/devkitpro/devkitARM/bin:\$PATH
+            echo 'Checking nds.h for calico.h...'
+            grep calico /opt/devkitpro/libnds/include/nds.h || echo '✅ nds.h is clean.'
+            for d in */ ; do
+              if [ -f \$d/Makefile ]; then
+                echo Building \$d
+                make -C \$d || echo ❌ Failed to build \$d
+              fi
+            done
+          "
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
