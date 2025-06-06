@@ -4,15 +4,15 @@ BUILD := build
 SOURCES := source
 INCLUDES := include assets
 
-# DevkitPro include path
-DEVKITPRO ?= /opt/devkitpro
-INCLUDE_DIRS := -I$(INCLUDES) -I$(DEVKITPRO)/libnds/include -DARM9
-
 # Image assets
 GFX := assets/Sniff-Cat.png
 GFX_C := assets/Sniff-Cat.c
 GFX_H := assets/Sniff-Cat.h
 GFX_O := assets/Sniff-Cat.o
+
+# Compiler commands (can be overridden by environment)
+CC := arm-none-eabi-gcc
+CXX := arm-none-eabi-g++
 
 LIBS := -lfat -lnds9
 
@@ -29,15 +29,15 @@ $(GFX_C) $(GFX_H): $(GFX)
 
 # Compile sprite graphics
 $(GFX_O): $(GFX_C)
-	arm-none-eabi-gcc -c $< -o $@
+	$(CC) -c $< -o $@
 
-# Compile main program (with system includes)
+# Compile main program
 $(BUILD)/main.o: source/main.c
-	arm-none-eabi-gcc -c $< -o $@ $(INCLUDE_DIRS)
+	$(CC) -c $< -o $@ -I$(INCLUDES)
 
 # Link final ELF
 $(TARGET).elf: $(BUILD)/main.o $(GFX_O)
-	arm-none-eabi-g++ -specs=ds_arm9.specs -o $@ $^ $(LIBS)
+	$(CXX) -specs=ds_arm9.specs -o $@ $^ $(LIBS)
 
 # Create NDS
 $(TARGET).nds: $(TARGET).elf
