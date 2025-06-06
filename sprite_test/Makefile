@@ -4,6 +4,10 @@ BUILD := build
 SOURCES := source
 INCLUDES := include assets
 
+# DevkitPro include path
+DEVKITPRO ?= /opt/devkitpro
+INCLUDE_DIRS := -I$(INCLUDES) -I$(DEVKITPRO)/libnds/include
+
 # Image assets
 GFX := assets/Sniff-Cat.png
 GFX_C := assets/Sniff-Cat.c
@@ -27,9 +31,9 @@ $(GFX_C) $(GFX_H): $(GFX)
 $(GFX_O): $(GFX_C)
 	arm-none-eabi-gcc -c $< -o $@
 
-# Compile main program (fixed to use gcc)
+# Compile main program (with system includes)
 $(BUILD)/main.o: source/main.c
-	arm-none-eabi-gcc -c $< -o $@ -I$(INCLUDES)
+	arm-none-eabi-gcc -c $< -o $@ $(INCLUDE_DIRS)
 
 # Link final ELF
 $(TARGET).elf: $(BUILD)/main.o $(GFX_O)
