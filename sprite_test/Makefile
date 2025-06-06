@@ -33,7 +33,7 @@ $(GFX_O): $(GFX_C)
 
 # Compile main program
 $(BUILD)/main.o: source/main.cpp
-	arm-none-eabi-g++ -specs=ds_arm9.specs -c $< -o $@ -Iinclude -Iassets -I/opt/devkitpro/libnds/include -DARM9
+	arm-none-eabi-g++ -specs=ds_arm9.specs -DARM9 -c $< -o $@ -Iinclude -Iassets -I/opt/devkitpro/libnds/include
 
 # Link final ELF
 $(TARGET).elf: $(BUILD)/main.o $(GFX_O)
