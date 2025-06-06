@@ -10,11 +10,12 @@ GFX_C := assets/Sniff-Cat.c
 GFX_H := assets/Sniff-Cat.h
 GFX_O := assets/Sniff-Cat.o
 
+# Compiler commands
 CC := arm-none-eabi-gcc
 CXX := arm-none-eabi-g++
 
-CFLAGS := -specs=ds_arm9.specs -mcpu=arm946e-s -mthumb -DARM9 $(INCLUDES)
-
+# Compiler flags for ARM9 NDS target
+CFLAGS := -specs=ds_arm9.specs -march=armv5te -mthumb -DARM9 $(INCLUDES)
 LIBS := -lfat -lnds9
 
 .PHONY: all clean
@@ -30,15 +31,15 @@ $(GFX_C) $(GFX_H): $(GFX)
 
 # Compile sprite graphics
 $(GFX_O): $(GFX_C)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -c $< -o $@
 
-# Compile main program (depend on GFX_H so changes rebuild main.o)
+# Compile main program
 $(BUILD)/main.o: $(SOURCES) $(GFX_H)
 	$(CXX) $(CFLAGS) -c $< -o $@
 
-# Link final ELF (add CPU and thumb flags here too)
+# Link final ELF
 $(TARGET).elf: $(BUILD)/main.o $(GFX_O)
-	$(CXX) $(CFLAGS) -o $@ $^ $(LIBS)
+	$(CXX) -specs=ds_arm9.specs -o $@ $^ $(LIBS)
 
 # Create NDS
 $(TARGET).nds: $(TARGET).elf
