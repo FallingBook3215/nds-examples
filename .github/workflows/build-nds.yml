@@ -18,16 +18,19 @@ jobs:
     - name: Set up Docker
       uses: docker/setup-buildx-action@v2
 
-    - name: Pull clean devkitPro image
-      run: docker pull devkitpro/devkitarm:20240401
-
-    - name: Build with clean devkitPro Docker image
+    - name: Build with devkitPro Docker (clean install of libnds)
       run: |
         docker run --rm \
           -v ${{ github.workspace }}:/home/devkitpro/project \
           -w /home/devkitpro/project \
-          devkitpro/devkitarm:20240401 bash -c "
-            export PATH=/opt/devkitpro/devkitARM/bin:\$PATH
+          devkitpro/devkitarm:latest bash -c "
+            export DEVKITPRO=/opt/devkitpro
+            export PATH=\$DEVKITPRO/devkitARM/bin:\$PATH
+
+            echo '🧼 Reinstalling clean libnds...'
+            sudo dkp-pacman -Sy --noconfirm libnds
+
+            echo '✅ Clean libnds installed. Starting build...'
 
             for d in */ ; do
               if [ -f \$d/Makefile ]; then
