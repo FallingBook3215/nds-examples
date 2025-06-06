@@ -21,6 +21,7 @@ jobs:
     - name: Build with devkitPro Docker
       run: |
         docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm bash -c "
+          export PATH=/opt/devkitpro/devkitARM/bin:$PATH
           for d in */ ; do
             if [ -f \$d/Makefile ]; then
               echo Building \$d
