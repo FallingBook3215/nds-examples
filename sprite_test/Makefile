@@ -27,9 +27,9 @@ $(GFX_C) $(GFX_H): $(GFX)
 $(GFX_O): $(GFX_C)
 	arm-none-eabi-gcc -c $< -o $@
 
-# Compile main program
+# Compile main program (fixed to use gcc)
 $(BUILD)/main.o: source/main.c
-	arm-none-eabi-g++ -c $< -o $@ -I$(INCLUDES)
+	arm-none-eabi-gcc -c $< -o $@ -I$(INCLUDES)
 
 # Link final ELF
 $(TARGET).elf: $(BUILD)/main.o $(GFX_O)
