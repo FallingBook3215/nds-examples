@@ -18,27 +18,17 @@ jobs:
     - name: Set up Docker
       uses: docker/setup-buildx-action@v2
 
-    - name: Pull latest devkitPro Docker image
-      run: docker pull devkitpro/devkitarm:latest
+    - name: Pull clean devkitPro image
+      run: docker pull devkitpro/devkitarm:20240401
 
-    - name: Build with devkitPro Docker
+    - name: Build with clean devkitPro Docker image
       run: |
         docker run --rm \
           -v ${{ github.workspace }}:/home/devkitpro/project \
           -w /home/devkitpro/project \
-          devkitpro/devkitarm:latest bash -c "
+          devkitpro/devkitarm:20240401 bash -c "
             export PATH=/opt/devkitpro/devkitARM/bin:\$PATH
 
-            # 💡 Fix corrupted nds.h if needed
-            if grep -q 'calico.h' /opt/devkitpro/libnds/include/nds.h; then
-              echo '⚠️ calico.h found — patching nds.h...'
-              sed -i 's|#include <calico.h>|// #include <calico.h>|' /opt/devkitpro/libnds/include/nds.h
-              echo '✅ Patched nds.h'
-            else
-              echo '✅ nds.h is clean'
-            fi
-
-            # Build all subfolders with Makefile
             for d in */ ; do
               if [ -f \$d/Makefile ]; then
                 echo Building \$d
