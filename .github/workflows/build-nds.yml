@@ -15,25 +15,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Build with devkitPro Docker + debug include paths
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build with devkitPro Docker
         run: |
-          docker run --pull always --rm \
-            -v ${{ github.workspace }}:/home/devkitpro/project \
-            -w /home/devkitpro/project \
-            devkitpro/devkitarm:20230501 bash -c "
-              echo 'Listing libnds include directory:'
-              ls -l /opt/devkitpro/libnds/include
-
-              export DEVKITPRO=/opt/devkitpro
-              export PATH=\$DEVKITPRO/devkitARM/bin:\$PATH
-
-              for d in */ ; do
-                if [ -f \$d/Makefile ]; then
-                  echo Building \$d
-                  make -C \$d || echo ❌ Failed to build \$d
-                fi
-              done
-            "
+          docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm bash -c "
+            for d in */ ; do
+              if [ -f \$d/Makefile ]; then
+                echo Building \$d
+                make -C \$d || echo Failed to build \$d
+              fi
+            done
+          "
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
