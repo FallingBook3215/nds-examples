@@ -18,13 +18,18 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Debug libnds includes
-      run: |
-        docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm:latest ls -l /opt/devkitpro/libnds/include/calico
-
-    - name: Build with devkitPro Docker
+    - name: Build with devkitPro Docker + install calico deps
       run: |
         docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm:latest bash -c "
+          set -e
+          echo 'Updating apt and installing dependencies...'
+          apt-get update -qq
+          # Try to install calico or libnds dependencies, ignore failures gracefully
+          apt-get install -y devkitpro-calico || echo 'Warning: devkitpro-calico package not found, continuing without install'
+          
+          echo 'Listing calico include directory:'
+          ls -la /opt/devkitpro/libnds/include/calico || echo 'Calico directory missing'
+          
           export PATH=/opt/devkitpro/devkitARM/bin:\$PATH
           for d in */ ; do
             if [ -f \$d/Makefile ]; then
