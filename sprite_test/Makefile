@@ -2,7 +2,7 @@
 TARGET := sprite_test
 BUILD := build
 SOURCES := source/main.cpp
-INCLUDES := -Iassets -I/opt/devkitpro/libnds/include
+INCLUDES := -I/opt/devkitpro/libnds/include -Iassets
 
 # Image assets
 GFX := assets/Sniff-Cat.png
