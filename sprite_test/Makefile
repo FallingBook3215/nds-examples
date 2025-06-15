@@ -1,94 +1,45 @@
-#---------------------------------------------------------------------------------
-.SUFFIXES:
-#---------------------------------------------------------------------------------
+TARGET := sprite_test
+BUILD := build
+SOURCES := source/main.cpp
+INCLUDES := -Iinclude -Iassets -I/opt/devkitpro/libnds/include
 
-ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
-endif
+# Asset files
+GFX := assets/Sniff-Cat.png
+GFX_C := assets/Sniff-Cat.c
+GFX_H := assets/Sniff-Cat.h
+GFX_O := assets/Sniff-Cat.o
 
-include $(DEVKITARM)/ds_rules
+CC := arm-none-eabi-gcc
+CXX := arm-none-eabi-g++
+CFLAGS := -specs=ds_arm9.specs -march=armv5te -mthumb -DARM9 $(INCLUDES)
+LIBS := -lnds9 -lfat
 
-#---------------------------------------------------------------------------------
-TARGET		:=	$(shell basename $(CURDIR))
-BUILD		:=	build
-SOURCES		:=	source
-INCLUDES	:=	include assets build
-
-ARCH	:=	-march=armv5te -mtune=arm946e-s -mthumb
-
-CFLAGS	:=	-g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH)
-CFLAGS	+=	$(INCLUDE) -DARM9
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
-
-ASFLAGS	:=	-g $(ARCH)
-LDFLAGS	=	-specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
-
-LIBS	:= -lnds9 -lfat
-LIBDIRS	:=	$(LIBNDS)
-
-#---------------------------------------------------------------------------------
-# Source files (C, C++, ASM)
-CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-BINFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.bin)))
-
-# Choose linker (C++ if cpp files exist)
-ifeq ($(strip $(CPPFILES)),)
-	LD := $(CC)
-else
-	LD := $(CXX)
-endif
-
-# Object files (include grit asset objects)
-OFILES	:= assets/Sniff-Cat.o $(addprefix $(BUILD)/,$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o))
-
-# Include paths
-INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-			-I$(CURDIR)/$(BUILD)
-
-LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
-
-#---------------------------------------------------------------------------------
 .PHONY: all clean
 
-all: $(BUILD) assets/Sniff-Cat.c assets/Sniff-Cat.h $(TARGET).nds
+all: $(BUILD) $(TARGET).nds
 
-# Create build directory
 $(BUILD):
-	@mkdir -p $@
+	mkdir -p $(BUILD)
 
-# Convert PNG to C and H files with grit
-assets/Sniff-Cat.c assets/Sniff-Cat.h: assets/Sniff-Cat.png
+# Generate .c and .h files from PNG with grit
+$(GFX_C) $(GFX_H): $(GFX)
 	grit $< -g -gB8 -p -o assets/Sniff-Cat
 
-# Compile grit-generated assets
-assets/Sniff-Cat.o: assets/Sniff-Cat.c assets/Sniff-Cat.h
+# Compile the generated C asset file
+$(GFX_O): $(GFX_C) $(GFX_H)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile C++ source files
-$(BUILD)/%.o: source/%.cpp | $(BUILD)
+# Compile main source, depends on the generated header
+$(BUILD)/main.o: $(SOURCES) $(GFX_H) | $(BUILD)
 	$(CXX) $(CFLAGS) -c $< -o $@
 
-# Compile C source files
-$(BUILD)/%.o: source/%.c | $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
+# Link objects
+$(TARGET).elf: $(BUILD)/main.o $(GFX_O)
+	$(CXX) -specs=ds_arm9.specs -o $@ $^ $(LIBS)
 
-# Compile assembly files
-$(BUILD)/%.o: source/%.s | $(BUILD)
-	$(AS) $(ASFLAGS) $< -o $@
-
-# Link ELF
-$(TARGET).elf: $(OFILES)
-	$(LD) $(LDFLAGS) -o $@ $^ $(LIBPATHS) $(LIBS)
-
-# Build final NDS file
+# Create the final NDS file
 $(TARGET).nds: $(TARGET).elf
 	ndstool -c $@ -9 $< -b 0x02000000
 
 clean:
-	@echo Cleaning...
-	@rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds assets/*.c assets/*.h assets/*.o
-
-#---------------------------------------------------------------------------------
+	rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds assets/*.c assets/*.h assets/*.o
