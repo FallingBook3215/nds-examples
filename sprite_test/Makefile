@@ -64,8 +64,7 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 # Create build dir and generate assets before building
 $(BUILD):
-	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@mkdir -p $@
 
 # Rule to convert PNG to C/H with grit before compilation
 assets/Sniff-Cat.c assets/Sniff-Cat.h: assets/Sniff-Cat.png
