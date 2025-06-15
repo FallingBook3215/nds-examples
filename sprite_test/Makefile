@@ -14,7 +14,6 @@ BUILD		:=	build
 SOURCES		:=	source
 INCLUDES	:=	include assets build
 
-#---------------------------------------------------------------------------------
 ARCH	:=	-march=armv5te -mtune=arm946e-s -mthumb
 
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH)
@@ -25,73 +24,71 @@ ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS	:= -lnds9 -lfat
-
 LIBDIRS	:=	$(LIBNDS)
 
 #---------------------------------------------------------------------------------
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
-export DEPSDIR	:=	$(CURDIR)/$(BUILD)
-
+# Source files (C, C++, ASM)
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 BINFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.bin)))
 
-#---------------------------------------------------------------------------------
+# Choose linker (C++ if cpp files exist)
 ifeq ($(strip $(CPPFILES)),)
-	export LD	:=	$(CC)
+	LD := $(CC)
 else
-	export LD	:=	$(CXX)
+	LD := $(CXX)
 endif
+
+# Object files (include grit asset objects)
+OFILES	:= assets/Sniff-Cat.o $(addprefix $(BUILD)/,$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o))
+
+# Include paths
+INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+			-I$(CURDIR)/$(BUILD)
+
+LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+
 #---------------------------------------------------------------------------------
+.PHONY: all clean
 
-export OFILES	:=	assets/Sniff-Cat.o $(BUILD)/main.o
+all: $(BUILD) assets/Sniff-Cat.c assets/Sniff-Cat.h $(TARGET).nds
 
-export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-					-I$(CURDIR)/$(BUILD)
-
-export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
-
-#---------------------------------------------------------------------------------
-.PHONY: assets grit clean $(BUILD)
-
-# Create build directory if missing
+# Create build directory
 $(BUILD):
 	@mkdir -p $@
 
-# Generate C and H from PNG with grit
+# Convert PNG to C and H files with grit
 assets/Sniff-Cat.c assets/Sniff-Cat.h: assets/Sniff-Cat.png
 	grit $< -g -gB8 -p -o assets/Sniff-Cat
 
-# Compile generated sprite source
+# Compile grit-generated assets
 assets/Sniff-Cat.o: assets/Sniff-Cat.c assets/Sniff-Cat.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile main.cpp, depends on the sprite header and build directory
-$(BUILD)/main.o: source/main.cpp assets/Sniff-Cat.h | $(BUILD)
+# Compile C++ source files
+$(BUILD)/%.o: source/%.cpp | $(BUILD)
 	$(CXX) $(CFLAGS) -c $< -o $@
 
-# Link executable
-$(OUTPUT).elf: $(OFILES)
+# Compile C source files
+$(BUILD)/%.o: source/%.c | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile assembly files
+$(BUILD)/%.o: source/%.s | $(BUILD)
+	$(AS) $(ASFLAGS) $< -o $@
+
+# Link ELF
+$(TARGET).elf: $(OFILES)
 	$(LD) $(LDFLAGS) -o $@ $^ $(LIBPATHS) $(LIBS)
 
-# Create .nds from ELF
-$(OUTPUT).nds: $(OUTPUT).elf
+# Build final NDS file
+$(TARGET).nds: $(TARGET).elf
 	ndstool -c $@ -9 $< -b 0x02000000
 
-# Clean up
 clean:
-	@echo Cleaning project...
+	@echo Cleaning...
 	@rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds assets/*.c assets/*.h assets/*.o
-
-#---------------------------------------------------------------------------------
-else
-
-DEPENDS	:=	$(OFILES:.o=.d)
-
--include $(DEPENDS)
 
 #---------------------------------------------------------------------------------
