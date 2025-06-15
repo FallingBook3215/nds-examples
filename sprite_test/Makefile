@@ -29,7 +29,6 @@ LIBS	:= -lnds9 -lfat
 LIBDIRS	:=	$(LIBNDS)
 
 #---------------------------------------------------------------------------------
-ifeq ($(BUILD),$(notdir $(CURDIR)))
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
@@ -95,5 +94,4 @@ DEPENDS	:=	$(OFILES:.o=.d)
 
 -include $(DEPENDS)
 
-endif
 #---------------------------------------------------------------------------------
