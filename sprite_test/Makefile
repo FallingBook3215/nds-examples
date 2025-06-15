@@ -1,51 +1,102 @@
-# Project name (binary output name)
-TARGET := sprite_test
-BUILD := build
-SOURCES := source/main.cpp
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+#---------------------------------------------------------------------------------
 
-# Include paths - ensure devkitPro's libnds include is first
-INCLUDES := -I/opt/devkitpro/libnds/include -Iassets
+ifeq ($(strip $(DEVKITARM)),)
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
+endif
 
-# Image assets
-GFX := assets/Sniff-Cat.png
-GFX_C := assets/Sniff-Cat.c
-GFX_H := assets/Sniff-Cat.h
-GFX_O := assets/Sniff-Cat.o
+include $(DEVKITARM)/ds_rules
 
-# Compiler commands
-CC := arm-none-eabi-gcc
-CXX := arm-none-eabi-g++
+#---------------------------------------------------------------------------------
+TARGET		:=	$(shell basename $(CURDIR))
+BUILD		:=	build
+SOURCES		:=	source
+INCLUDES	:=	include assets build
 
-# Compiler flags for ARM9 NDS target
-CFLAGS := -specs=ds_arm9.specs -march=armv5te -mthumb -DARM9 $(INCLUDES)
-LIBS := -lfat -lnds9
+#---------------------------------------------------------------------------------
+ARCH	:=	-march=armv5te -mtune=arm946e-s -mthumb
 
-.PHONY: all clean
+CFLAGS	:=	-g -Wall -O2 -ffunction-sections -fdata-sections\
+			$(ARCH)
 
-all: $(BUILD) $(TARGET).nds
+CFLAGS	+=	$(INCLUDE) -DARM9
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
 
+ASFLAGS	:=	-g $(ARCH)
+LDFLAGS	=	-specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+
+LIBS	:= -lnds9 -lfat
+
+LIBDIRS	:=	$(LIBNDS)
+
+#---------------------------------------------------------------------------------
+ifeq ($(BUILD),$(notdir $(CURDIR)))
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
+export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+BINFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.bin)))
+
+#---------------------------------------------------------------------------------
+ifeq ($(strip $(CPPFILES)),)
+	export LD	:=	$(CC)
+else
+	export LD	:=	$(CXX)
+endif
+#---------------------------------------------------------------------------------
+
+export OFILES	:=	$(BINFILES:.bin=.o) \
+					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+					-I$(CURDIR)/$(BUILD)
+
+export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+
+#---------------------------------------------------------------------------------
+.PHONY: assets grit clean
+
+# Create build dir and generate assets before building
 $(BUILD):
-	mkdir -p $(BUILD)
+	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
-# Grit conversion: generate .c/.h from image
-$(GFX_C) $(GFX_H): $(GFX)
+# Rule to convert PNG to C/H with grit before compilation
+assets/Sniff-Cat.c assets/Sniff-Cat.h: assets/Sniff-Cat.png
 	grit $< -g -gB8 -p -o assets/Sniff-Cat
 
-# Compile sprite graphics
-$(GFX_O): $(GFX_C)
-	$(CC) -c $< -o $@
+# Compile grit-generated sprite .c to object
+assets/Sniff-Cat.o: assets/Sniff-Cat.c assets/Sniff-Cat.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile main program
-$(BUILD)/main.o: $(SOURCES) $(GFX_H)
+# Make sure assets are built before main.o
+$(BUILD)/main.o: source/main.cpp assets/Sniff-Cat.h | $(BUILD)
 	$(CXX) $(CFLAGS) -c $< -o $@
 
-# Link final ELF
-$(TARGET).elf: $(BUILD)/main.o $(GFX_O)
-	$(CXX) -specs=ds_arm9.specs -o $@ $^ $(LIBS)
+# Add the generated sprite object to object list for linking
+export OFILES := assets/Sniff-Cat.o $(BUILD)/main.o
 
-# Create NDS
-$(TARGET).nds: $(TARGET).elf
-	ndstool -c $@ -9 $< -b 0x02000000
+# Targets for ELF and NDS
+$(OUTPUT).nds	: 	$(OUTPUT).elf
+$(OUTPUT).elf	:	$(OFILES)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBPATHS) $(LIBS)
 
 clean:
-	rm -rf $(BUILD) *.nds *.elf assets/*.c assets/*.h assets/*.o
+	@echo clean ...
+	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds assets/*.c assets/*.h assets/*.o
+
+#---------------------------------------------------------------------------------
+else
+
+DEPENDS	:=	$(OFILES:.o=.d)
+
+-include $(DEPENDS)
+
+endif
+#---------------------------------------------------------------------------------
