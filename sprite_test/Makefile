@@ -2,6 +2,8 @@
 TARGET := sprite_test
 BUILD := build
 SOURCES := source/main.cpp
+
+# Include paths - ensure devkitPro's libnds include is first
 INCLUDES := -I/opt/devkitpro/libnds/include -Iassets
 
 # Image assets
