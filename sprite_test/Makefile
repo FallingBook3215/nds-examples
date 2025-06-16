@@ -1,45 +1,62 @@
+# Project
 TARGET := sprite_test
 BUILD := build
-SOURCES := source/main.cpp
-INCLUDES := -Iinclude -Iassets -I/opt/devkitpro/libnds/include -I/opt/devkitpro/libnds/include/calico
+SRC := source
+ASSETS := assets
 
-# Asset files
-GFX := assets/Sniff-Cat.png
-GFX_C := assets/Sniff-Cat.c
-GFX_H := assets/Sniff-Cat.h
-GFX_O := assets/Sniff-Cat.o
-
+# Toolchain
 CC := arm-none-eabi-gcc
 CXX := arm-none-eabi-g++
-CFLAGS := -specs=ds_arm9.specs -march=armv5te -mthumb -DARM9 $(INCLUDES)
-LIBS := -lnds9 -lfat
+LD := arm-none-eabi-g++
+OBJCOPY := arm-none-eabi-objcopy
+
+# Flags
+ARCH := -march=armv5te -mtune=arm946e-s -mthumb
+CFLAGS := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) -DARM9
+CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
+LDFLAGS := -specs=ds_arm9.specs -g $(ARCH)
+LIBS := -lfat -lnds9
+
+# Includes
+INCLUDES := -Iinclude -I$(ASSETS) -I/opt/devkitpro/libnds/include
+CFLAGS += $(INCLUDES)
+CXXFLAGS += $(INCLUDES)
+
+# Files
+PNG := $(ASSETS)/Sniff-Cat.png
+GFX_C := $(ASSETS)/Sniff-Cat.c
+GFX_H := $(ASSETS)/Sniff-Cat.h
+GFX_O := $(ASSETS)/Sniff-Cat.o
+MAIN_O := $(BUILD)/main.o
 
 .PHONY: all clean
 
-all: $(BUILD) $(TARGET).nds
+all: $(TARGET).nds
 
-$(BUILD):
-	mkdir -p $(BUILD)
+# Convert PNG to .c/.h with grit
+$(GFX_C) $(GFX_H): $(PNG)
+	grit $< -g -gB8 -p -o $(ASSETS)/Sniff-Cat
 
-# Generate .c and .h files from PNG with grit
-$(GFX_C) $(GFX_H): $(GFX)
-	grit $< -g -gB8 -p -o assets/Sniff-Cat
-
-# Compile the generated C asset file
-$(GFX_O): $(GFX_C) $(GFX_H)
+# Compile assets
+$(GFX_O): $(GFX_C)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile main source, depends on the generated header
-$(BUILD)/main.o: $(SOURCES) $(GFX_H) | $(BUILD)
-	$(CXX) $(CFLAGS) -c $< -o $@
+# Compile main.cpp
+$(MAIN_O): $(SRC)/main.cpp | $(BUILD)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Link objects
-$(TARGET).elf: $(BUILD)/main.o $(GFX_O)
-	$(CXX) -specs=ds_arm9.specs -o $@ $^ $(LIBS)
+# Link
+$(TARGET).elf: $(MAIN_O) $(GFX_O)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-# Create the final NDS file
+# Create .nds file
 $(TARGET).nds: $(TARGET).elf
 	ndstool -c $@ -9 $< -b 0x02000000
 
+# Make build dir
+$(BUILD):
+	mkdir -p $(BUILD)
+
+# Clean
 clean:
-	rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds assets/*.c assets/*.h assets/*.o
+	rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds $(GFX_C) $(GFX_H) $(GFX_O)
