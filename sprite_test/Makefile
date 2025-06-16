@@ -14,7 +14,7 @@ include $(DEVKITARM)/ds_rules
 TARGET := sprite_test
 BUILD := build
 SOURCES := source
-INCLUDES := include assets
+INCLUDES := assets
 
 #---------------------------------------------------------------------------------
 # File Definitions
