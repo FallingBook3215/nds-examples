@@ -1,62 +1,123 @@
-# Project
-TARGET := sprite_test
-BUILD := build
-SRC := source
-ASSETS := assets
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+#---------------------------------------------------------------------------------
 
-# Toolchain
-CC := arm-none-eabi-gcc
-CXX := arm-none-eabi-g++
-LD := arm-none-eabi-g++
-OBJCOPY := arm-none-eabi-objcopy
+ifeq ($(strip $(DEVKITARM)),)
+$(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
+endif
 
-# Flags
-ARCH := -march=armv5te -mtune=arm946e-s -mthumb
-CFLAGS := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) -DARM9
-CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
-LDFLAGS := -specs=ds_arm9.specs -g $(ARCH)
-LIBS := -lfat -lnds9
+include $(DEVKITARM)/ds_rules
 
-# Includes
-INCLUDES := -Iinclude -I$(ASSETS) -I/opt/devkitpro/libnds/include
-CFLAGS += $(INCLUDES)
-CXXFLAGS += $(INCLUDES)
+#---------------------------------------------------------------------------------
+# TARGET is the name of the output
+# BUILD is the directory where object files & intermediate files will be placed
+# SOURCES is a list of directories containing source code
+# INCLUDES is a list of directories containing extra header files
+#---------------------------------------------------------------------------------
+TARGET		:=	$(shell basename $(CURDIR))
+BUILD		:=	build
+SOURCES		:=	gfx source data
+INCLUDES	:=	include build
 
-# Files
-PNG := $(ASSETS)/Sniff-Cat.png
-GFX_C := $(ASSETS)/Sniff-Cat.c
-GFX_H := $(ASSETS)/Sniff-Cat.h
-GFX_O := $(ASSETS)/Sniff-Cat.o
-MAIN_O := $(BUILD)/main.o
+#---------------------------------------------------------------------------------
+# options for code generation
+#---------------------------------------------------------------------------------
+ARCH	:=	-march=armv5te -mtune=arm946e-s -mthumb
 
-.PHONY: all clean
+CFLAGS	:=	-g -Wall -O2 -ffunction-sections -fdata-sections\
+			$(ARCH)
 
-all: $(TARGET).nds
+CFLAGS	+=	$(INCLUDE) -DARM9
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
 
-# Convert PNG to .c/.h with grit
-$(GFX_C) $(GFX_H): $(PNG)
-	grit $< -g -gB8 -p -o $(ASSETS)/Sniff-Cat
+ASFLAGS	:=	-g $(ARCH)
+LDFLAGS	=	-specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-# Compile assets
-$(GFX_O): $(GFX_C)
-	$(CC) $(CFLAGS) -c $< -o $@
+#---------------------------------------------------------------------------------
+# any extra libraries we wish to link with the project
+#---------------------------------------------------------------------------------
+LIBS	:= -lnds9
 
-# Compile main.cpp
-$(MAIN_O): $(SRC)/main.cpp | $(BUILD)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Link
-$(TARGET).elf: $(MAIN_O) $(GFX_O)
-	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+#---------------------------------------------------------------------------------
+# list of directories containing libraries, this must be the top level containing
+# include and lib
+#---------------------------------------------------------------------------------
+LIBDIRS	:=	$(LIBNDS)
 
-# Create .nds file
-$(TARGET).nds: $(TARGET).elf
-	ndstool -c $@ -9 $< -b 0x02000000
+#---------------------------------------------------------------------------------
+# no real need to edit anything past this point unless you need to add additional
+# rules for different file extensions
+#---------------------------------------------------------------------------------
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+#---------------------------------------------------------------------------------
 
-# Make build dir
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
+export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+BINFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.bin)))
+
+#---------------------------------------------------------------------------------
+# use CXX for linking C++ projects, CC for standard C
+#---------------------------------------------------------------------------------
+ifeq ($(strip $(CPPFILES)),)
+#---------------------------------------------------------------------------------
+	export LD	:=	$(CC)
+#---------------------------------------------------------------------------------
+else
+#---------------------------------------------------------------------------------
+	export LD	:=	$(CXX)
+#---------------------------------------------------------------------------------
+endif
+#---------------------------------------------------------------------------------
+
+export OFILES	:=	$(BINFILES:.bin=.o) \
+					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+					-I$(CURDIR)/$(BUILD)
+
+export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+
+.PHONY: $(BUILD) clean
+
+#---------------------------------------------------------------------------------
 $(BUILD):
-	mkdir -p $(BUILD)
+	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
-# Clean
+#---------------------------------------------------------------------------------
 clean:
-	rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds $(GFX_C) $(GFX_H) $(GFX_O)
+	@echo clean ...
+	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
+
+
+#---------------------------------------------------------------------------------
+else
+
+DEPENDS	:=	$(OFILES:.o=.d)
+
+#---------------------------------------------------------------------------------
+# main targets
+#---------------------------------------------------------------------------------
+$(OUTPUT).nds	: 	$(OUTPUT).elf
+$(OUTPUT).elf	:	$(OFILES)
+
+#---------------------------------------------------------------------------------
+%.o	:	%.bin
+#---------------------------------------------------------------------------------
+	@echo $(notdir $<)
+	$(bin2o)
+
+
+-include $(DEPENDS)
+
+#---------------------------------------------------------------------------------------
+endif
+#-------------------------------------------------------------------
