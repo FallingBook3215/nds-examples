@@ -43,7 +43,7 @@ LDFLAGS    := -specs=ds_arm9.specs -g $(ARCH)
 LIBS       := -lfat -lnds9
 
 INCLUDE    := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-              -I$(CURDIR)/$(BUILD)
+              -I/opt/devkitpro/libnds/include
 
 #---------------------------------------------------------------------------------
 # Rules
