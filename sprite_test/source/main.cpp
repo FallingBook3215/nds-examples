@@ -1,6 +1,7 @@
+#define ARM9             // Define ARM9 early for nds.h checks
 #include <nds.h>
 #include <stdio.h>
-#include "Sniff-Cat.h"  // Include the sprite header
+#include "Sniff-Cat.h"    // Include the sprite header
 
 int main(void) {
     // Initialize DS screens
