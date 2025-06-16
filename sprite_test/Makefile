@@ -9,81 +9,60 @@ endif
 include $(DEVKITARM)/ds_rules
 
 #---------------------------------------------------------------------------------
-# TARGET is the name of the output
-# BUILD is the directory where object files & intermediate files will be placed
-# SOURCES is a list of directories containing source code
-# INCLUDES is a list of directories containing extra header files
+# Project Settings
 #---------------------------------------------------------------------------------
-TARGET		:=	$(shell basename $(CURDIR))
-BUILD		:=	build
-SOURCES		:=	gfx source data
-INCLUDES	:=	include build
+TARGET := sprite_test
+BUILD := build
+SOURCES := source
+INCLUDES := include assets
 
 #---------------------------------------------------------------------------------
-# options for code generation
+# File Definitions
 #---------------------------------------------------------------------------------
-ARCH	:=	-march=armv5te -mtune=arm946e-s -mthumb
-
-CFLAGS	:=	-g -Wall -O2 -ffunction-sections -fdata-sections\
-			$(ARCH)
-
-CFLAGS	+=	$(INCLUDE) -DARM9
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
-
-ASFLAGS	:=	-g $(ARCH)
-LDFLAGS	=	-specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+ASSET_PNG := assets/Sniff-Cat.png
+ASSET_C := assets/Sniff-Cat.c
+ASSET_H := assets/Sniff-Cat.h
+ASSET_O := assets/Sniff-Cat.o
 
 #---------------------------------------------------------------------------------
-# any extra libraries we wish to link with the project
-#---------------------------------------------------------------------------------
-LIBS	:= -lnds9
+ARCH := -march=armv5te -mtune=arm946e-s -mthumb
+CFLAGS := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH)
+CFLAGS += $(INCLUDE) -DARM9
+CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
+ASFLAGS := -g $(ARCH)
+LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LIBS := -lnds9 -lfat
+LIBDIRS := $(LIBNDS)
 
-
-#---------------------------------------------------------------------------------
-# list of directories containing libraries, this must be the top level containing
-# include and lib
-#---------------------------------------------------------------------------------
-LIBDIRS	:=	$(LIBNDS)
-
-#---------------------------------------------------------------------------------
-# no real need to edit anything past this point unless you need to add additional
-# rules for different file extensions
 #---------------------------------------------------------------------------------
 ifneq ($(BUILD),$(notdir $(CURDIR)))
-#---------------------------------------------------------------------------------
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
+export OUTPUT := $(CURDIR)/$(TARGET)
+export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
+export DEPSDIR := $(CURDIR)/$(BUILD)
 
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
-export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CPPFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
+SFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+BINFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.bin)))
 
-CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-BINFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.bin)))
-
-#---------------------------------------------------------------------------------
-# use CXX for linking C++ projects, CC for standard C
-#---------------------------------------------------------------------------------
 ifeq ($(strip $(CPPFILES)),)
-#---------------------------------------------------------------------------------
-	export LD	:=	$(CC)
-#---------------------------------------------------------------------------------
+	export LD := $(CC)
 else
-#---------------------------------------------------------------------------------
-	export LD	:=	$(CXX)
-#---------------------------------------------------------------------------------
+	export LD := $(CXX)
 endif
-#---------------------------------------------------------------------------------
 
-export OFILES	:=	$(BINFILES:.bin=.o) \
-					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES := $(BINFILES:.bin=.o) \
+                 $(CPPFILES:.cpp=.o) \
+                 $(CFILES:.c=.o) \
+                 $(SFILES:.s=.o) \
+                 $(notdir $(ASSET_O))
 
-export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-					-I$(CURDIR)/$(BUILD)
+export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+                  $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+                  -I$(CURDIR)/$(BUILD)
 
-export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 .PHONY: $(BUILD) clean
 
@@ -95,29 +74,27 @@ $(BUILD):
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
-
+	@rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds assets/*.c assets/*.h assets/*.o
 
 #---------------------------------------------------------------------------------
+# Grit Rule: Convert PNG to .c/.h
+#---------------------------------------------------------------------------------
+$(ASSET_C) $(ASSET_H): $(ASSET_PNG)
+	grit $< -g -gB8 -p -o assets/Sniff-Cat
+
+#---------------------------------------------------------------------------------
+# Compile Grit Output to .o
+#---------------------------------------------------------------------------------
+$(ASSET_O): $(ASSET_C) $(ASSET_H)
+	$(CC) $(CFLAGS) -c $(ASSET_C) -o $(ASSET_O)
+
 else
 
-DEPENDS	:=	$(OFILES:.o=.d)
+DEPENDS := $(OFILES:.o=.d)
 
-#---------------------------------------------------------------------------------
-# main targets
-#---------------------------------------------------------------------------------
-$(OUTPUT).nds	: 	$(OUTPUT).elf
-$(OUTPUT).elf	:	$(OFILES)
-
-#---------------------------------------------------------------------------------
-%.o	:	%.bin
-#---------------------------------------------------------------------------------
-	@echo $(notdir $<)
-	$(bin2o)
-
+$(OUTPUT).nds: $(OUTPUT).elf
+$(OUTPUT).elf: $(OFILES)
 
 -include $(DEPENDS)
 
-#---------------------------------------------------------------------------------------
 endif
-#-------------------------------------------------------------------
