@@ -18,6 +18,13 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
+    - name: Check devkitPro include directory
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm:latest bash -c "
+          ls -l /opt/devkitpro/libnds/include
+          ls -l /opt/devkitpro/libnds/include/nds.h
+        "
+
     - name: Build with devkitPro Docker + install calico deps
       run: |
         docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm:latest bash -c "
