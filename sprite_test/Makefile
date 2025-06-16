@@ -9,92 +9,73 @@ endif
 include $(DEVKITARM)/ds_rules
 
 #---------------------------------------------------------------------------------
-# Project Settings
+# Settings
 #---------------------------------------------------------------------------------
-TARGET := sprite_test
-BUILD := build
-SOURCES := source
-INCLUDES := assets
-
-#---------------------------------------------------------------------------------
-# File Definitions
-#---------------------------------------------------------------------------------
-ASSET_PNG := assets/Sniff-Cat.png
-ASSET_C := assets/Sniff-Cat.c
-ASSET_H := assets/Sniff-Cat.h
-ASSET_O := assets/Sniff-Cat.o
+TARGET     := sprite_test
+BUILD      := build
+SOURCES    := source
+INCLUDES   := include assets
 
 #---------------------------------------------------------------------------------
-ARCH := -march=armv5te -mtune=arm946e-s -mthumb
-CFLAGS := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH)
-CFLAGS += $(INCLUDE) -DARM9
-CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
-ASFLAGS := -g $(ARCH)
-LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
-LIBS := -lnds9 -lfat
-LIBDIRS := $(LIBNDS)
+# Source files
+#---------------------------------------------------------------------------------
+GFX_PNG    := assets/Sniff-Cat.png
+GFX_C      := assets/Sniff-Cat.c
+GFX_H      := assets/Sniff-Cat.h
+GFX_O      := assets/Sniff-Cat.o
+MAIN_CPP   := source/main.cpp
+MAIN_O     := $(BUILD)/main.o
 
 #---------------------------------------------------------------------------------
-ifneq ($(BUILD),$(notdir $(CURDIR)))
-
-export OUTPUT := $(CURDIR)/$(TARGET)
-export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
-export DEPSDIR := $(CURDIR)/$(BUILD)
-
-CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-SFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-BINFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.bin)))
-
-ifeq ($(strip $(CPPFILES)),)
-	export LD := $(CC)
-else
-	export LD := $(CXX)
-endif
-
-export OFILES := $(BINFILES:.bin=.o) \
-                 $(CPPFILES:.cpp=.o) \
-                 $(CFILES:.c=.o) \
-                 $(SFILES:.s=.o) \
-                 $(notdir $(ASSET_O))
-
-export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-                  $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-                  -I$(CURDIR)/$(BUILD)
-
-export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
-
-.PHONY: $(BUILD) clean
+# Output
+#---------------------------------------------------------------------------------
+OUTPUT     := $(CURDIR)/$(TARGET)
 
 #---------------------------------------------------------------------------------
+# Includes, flags, libs
+#---------------------------------------------------------------------------------
+ARCH       := -march=armv5te -mtune=arm946e-s -mthumb
+
+CFLAGS     := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH) -DARM9
+CXXFLAGS   := $(CFLAGS) -fno-rtti -fno-exceptions
+
+LDFLAGS    := -specs=ds_arm9.specs -g $(ARCH)
+LIBS       := -lfat -lnds9
+
+INCLUDE    := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+              -I$(CURDIR)/$(BUILD)
+
+#---------------------------------------------------------------------------------
+# Rules
+#---------------------------------------------------------------------------------
+.PHONY: all clean
+
+all: $(TARGET).nds
+
+# Create build directory
 $(BUILD):
-	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	mkdir -p $@
 
-#---------------------------------------------------------------------------------
+# Generate graphics from PNG using grit
+$(GFX_C) $(GFX_H): $(GFX_PNG)
+	grit $< -g -gB8 -p -o $(basename $<)
+
+# Compile sprite C file
+$(GFX_O): $(GFX_C) $(GFX_H)
+	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
+
+# Compile main.cpp (wait for Sniff-Cat.h)
+$(MAIN_O): $(MAIN_CPP) $(GFX_H) | $(BUILD)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+
+# Link everything into ELF
+$(TARGET).elf: $(MAIN_O) $(GFX_O)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+# Convert ELF to NDS
+$(TARGET).nds: $(TARGET).elf
+	ndstool -c $@ -9 $< -b 0x02000000
+
+# Clean files
 clean:
-	@echo clean ...
-	@rm -rf $(BUILD) $(TARGET).elf $(TARGET).nds assets/*.c assets/*.h assets/*.o
-
-#---------------------------------------------------------------------------------
-# Grit Rule: Convert PNG to .c/.h
-#---------------------------------------------------------------------------------
-$(ASSET_C) $(ASSET_H): $(ASSET_PNG)
-	grit $< -g -gB8 -p -o assets/Sniff-Cat
-
-#---------------------------------------------------------------------------------
-# Compile Grit Output to .o
-#---------------------------------------------------------------------------------
-$(ASSET_O): $(ASSET_C) $(ASSET_H)
-	$(CC) $(CFLAGS) -c $(ASSET_C) -o $(ASSET_O)
-
-else
-
-DEPENDS := $(OFILES:.o=.d)
-
-$(OUTPUT).nds: $(OUTPUT).elf
-$(OUTPUT).elf: $(OFILES)
-
--include $(DEPENDS)
-
-endif
+	rm -rf $(BUILD) *.elf *.nds assets/*.c assets/*.h assets/*.o
