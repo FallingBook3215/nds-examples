@@ -89,8 +89,8 @@ $(BUILD):
 
 #---------------------------------------------------------------------------------
 clean:
-    @echo clean ...
-    @rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
+	@echo clean ...
+	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
 
 #---------------------------------------------------------------------------------
 else
