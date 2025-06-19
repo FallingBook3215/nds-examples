@@ -24,6 +24,9 @@ jobs:
           ls -l /opt/devkitpro/libnds/include
           ls -l /opt/devkitpro/libnds/include/nds.h
         "
+    - name: List files in sprite_test/assets
+      run: |
+        ls -l sprite_test/assets
     - name: Check for grit
       run: |
         docker run --rm devkitpro/devkitarm:latest bash -c "which grit || echo 'grit not found'"
@@ -41,6 +44,12 @@ jobs:
           ls -la /opt/devkitpro/libnds/include/calico || echo 'Calico directory missing'
           
           export PATH=/opt/devkitpro/devkitARM/bin:\$PATH
+          echo 'Listing assets in each project:'
+          for d in */ ; do
+            if [ -d "$d/assets" ]; then
+              ls -l "$d/assets"
+            fi
+          done
           for d in */ ; do
             if [ -f \$d/Makefile ]; then
               echo Building \$d
