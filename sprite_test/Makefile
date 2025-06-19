@@ -97,17 +97,15 @@ $(OUTPUT).elf   :   $(OFILES)
 #---------------------------------------------------------------------------------
 # If you want to check for the header's existence, you can add:
 ASSETDIR := assets
-PNG := $(ASSETDIR)/Sniff-Cat.png
-GRIT := $(ASSETDIR)/Sniff-Cat.grit
-HEADER := $(ASSETDIR)/Sniff-Cat.h
-SFILE := $(ASSETDIR)/Sniff-Cat.s
+PNG_ASSETS := $(basename $(notdir $(wildcard $(ASSETDIR)/*.png)))
+GRIT_HEADERS := $(addprefix $(ASSETDIR)/,$(addsuffix .h,$(PNG_ASSETS)))
+GRIT_SFILES  := $(addprefix $(ASSETDIR)/,$(addsuffix .s,$(PNG_ASSETS)))
 
 # Rule to generate .h and .s from .png and .grit
-$(ASSETDIR)/Sniff-Cat.h $(ASSETDIR)/Sniff-Cat.s : $(PNG) $(GRIT)
-	grit $< -fts -o$(ASSETDIR)/Sniff-Cat
+$(ASSETDIR)/%.h $(ASSETDIR)/%.s: $(ASSETDIR)/%.png $(ASSETDIR)/%.grit
+	grit $< -fts -o$(ASSETDIR)/$*
 
-# Make sure your main.o depends on the header
-$(BUILD)/main.o: $(HEADER)
+$(BUILD)/main.o: $(ASSETDIR)/Sniff-Cat.h
 
 -include $(DEPENDS)
 
