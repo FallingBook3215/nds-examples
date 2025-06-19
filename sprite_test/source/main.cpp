@@ -1,16 +1,23 @@
 #include <nds.h>
 #include <stdio.h>
+#include "assets/Sniff-Cat.h" // Include the generated header
 
 int main(void) {
-    // Setup bottom screen for 16-bit bitmap
-    videoSetModeSub(MODE_5_2D);
-    vramSetBankC(VRAM_C_SUB_BG);
-    SUB_BG2_CR = BG_BMP16_256x256 | BG_BMP_BASE(0);
+    consoleDemoInit();
 
-    // Copy image to VRAM (assuming 256x192, otherwise add centering logic)
-    dmaCopy(Sniff_CatBitmap, BG_BMP_RAM_SUB(0), Sniff_CatBitmapLen);
+    // Example: draw the bitmap if it's 16-bit
+    // (replace with your actual rendering code)
+    int x = 0, y = 0;
+    u16* vram = BG_BMP_RAM(0);
+    for (int i = 0; i < Sniff_CatBitmapLen / 2; ++i) {
+        vram[i] = Sniff_CatBitmap[i];
+    }
 
     while (1) {
         swiWaitForVBlank();
+        scanKeys();
+        if (keysDown() & KEY_START) break;
     }
+
+    return 0;
 }
