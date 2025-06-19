@@ -112,8 +112,20 @@ $(OUTPUT).elf   :   $(OFILES)
 
 -include $(DEPENDS)
 
+ASSETDIR := assets
+PNG_ASSETS := $(basename $(notdir $(wildcard $(ASSETDIR)/*.png)))
+GRIT_HEADERS := $(addprefix $(ASSETDIR)/,$(addsuffix .h,$(PNG_ASSETS)))
+GRIT_SFILES  := $(addprefix $(ASSETDIR)/,$(addsuffix .s,$(PNG_ASSETS)))
+
 %.s %.h : %.png %.grit
 	grit $< -fts -o$*
+
+$(BUILD)/main.o: $(GRIT_HEADERS)
+
+clean:
+	@echo clean ...
+	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
+	@rm -f $(ASSETDIR)/*.h $(ASSETDIR)/*.s
 
 #---------------------------------------------------------------------------------------
 endif
