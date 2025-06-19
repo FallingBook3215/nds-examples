@@ -101,8 +101,10 @@ PNG_ASSETS := $(basename $(notdir $(wildcard $(ASSETDIR)/*.png)))
 GRIT_HEADERS := $(addprefix $(ASSETDIR)/,$(addsuffix .h,$(PNG_ASSETS)))
 GRIT_SFILES  := $(addprefix $(ASSETDIR)/,$(addsuffix .s,$(PNG_ASSETS)))
 
-# Rule to generate .h and .s from .png and .grit
-$(ASSETDIR)/%.h $(ASSETDIR)/%.s: $(ASSETDIR)/%.png $(ASSETDIR)/%.grit
+$(ASSETDIR)/%.h: $(ASSETDIR)/%.png $(ASSETDIR)/%.grit
+	grit $< -fts -o$(ASSETDIR)/$*
+
+$(ASSETDIR)/%.s: $(ASSETDIR)/%.png $(ASSETDIR)/%.grit
 	grit $< -fts -o$(ASSETDIR)/$*
 
 $(BUILD)/main.o: $(ASSETDIR)/Sniff-Cat.h
