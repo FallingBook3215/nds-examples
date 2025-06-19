@@ -24,6 +24,12 @@ jobs:
           ls -l /opt/devkitpro/libnds/include
           ls -l /opt/devkitpro/libnds/include/nds.h
         "
+    - name: List files in sprite_test/assets
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project/sprite_test devkitpro/devkitarm:latest ls -l assets
+    - name: Check for grit
+      run: |
+        docker run --rm devkitpro/devkitarm:latest bash -c "which grit || echo 'grit not found'"
     - name: Build with devkitPro Docker + install calico deps
       run: |
         docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm:latest bash -c "
