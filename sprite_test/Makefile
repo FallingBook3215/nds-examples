@@ -52,7 +52,6 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
 
 export OUTPUT   := $(CURDIR)/$(TARGET)
-
 export VPATH    := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR  := $(CURDIR)/$(BUILD)
 
@@ -61,15 +60,11 @@ CPPFILES    := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES      := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 BINFILES    := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.bin)))
 
-#---------------------------------------------------------------------------------
-# use CXX for linking C++ projects, CC for standard C
-#---------------------------------------------------------------------------------
 ifeq ($(strip $(CPPFILES)),)
     export LD := $(CC)
 else
     export LD := $(CXX)
 endif
-#---------------------------------------------------------------------------------
 
 export OFILES    := $(BINFILES:.bin=.o) \
                     $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
@@ -82,12 +77,10 @@ export LIBPATHS  := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 .PHONY: $(BUILD) clean
 
-#---------------------------------------------------------------------------------
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
-#---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
@@ -97,36 +90,21 @@ else
 
 DEPENDS := $(OFILES:.o=.d)
 
-#---------------------------------------------------------------------------------
 # main targets
-#---------------------------------------------------------------------------------
 $(OUTPUT).nds   :   $(OUTPUT).elf
 $(OUTPUT).elf   :   $(OFILES)
 
 #---------------------------------------------------------------------------------
-%.o : %.bin
-#---------------------------------------------------------------------------------
-	@echo $(notdir $<)
-	$(bin2o)
+# If you want to check for the header's existence, you can add:
+ASSET_HEADERS := assets/Sniff-Cat.h # Add more if you have more assets
 
+$(BUILD)/main.o: $(ASSET_HEADERS)
 
 -include $(DEPENDS)
-
-ASSETDIR := assets
-PNG_ASSETS := $(basename $(notdir $(wildcard $(ASSETDIR)/*.png)))
-GRIT_HEADERS := $(addprefix $(ASSETDIR)/,$(addsuffix .h,$(PNG_ASSETS)))
-GRIT_SFILES  := $(addprefix $(ASSETDIR)/,$(addsuffix .s,$(PNG_ASSETS)))
-
-%.s %.h : %.png %.grit
-	grit $< -fts -o$*
-
-$(BUILD)/main.o: $(GRIT_HEADERS)
 
 clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
-	@rm -f $(ASSETDIR)/*.h $(ASSETDIR)/*.s
 
-#---------------------------------------------------------------------------------------
 endif
 #---------------------------------------------------------------------------------------
