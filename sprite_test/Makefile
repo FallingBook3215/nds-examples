@@ -41,10 +41,10 @@ GRIT_SFILES  := $(addprefix $(ASSETDIR)/,$(addsuffix .s,$(PNG_ASSETS)))
 
 # Rule to generate .h and .s from .png and .grit
 $(ASSETDIR)/%.h: $(ASSETDIR)/%.png $(ASSETDIR)/%.grit
-	grit $< -fts -o$(ASSETDIR)/$*
+	grit $< -fts -fh! -o$(ASSETDIR)/$*
 
 $(ASSETDIR)/%.s: $(ASSETDIR)/%.png $(ASSETDIR)/%.grit
-	grit $< -fts -o$(ASSETDIR)/$*
+	grit $< -fts -fh! -o$(ASSETDIR)/$*
 
 #---------------------------------------------------------------------------------
 # Build system
