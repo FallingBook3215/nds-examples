@@ -24,9 +24,6 @@ jobs:
           ls -l /opt/devkitpro/libnds/include
           ls -l /opt/devkitpro/libnds/include/nds.h
         "
-    - name: List files in sprite_test/assets
-      run: |
-        docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project/sprite_test devkitpro/devkitarm:latest ls -l assets
     - name: Check for grit
       run: |
         docker run --rm devkitpro/devkitarm:latest bash -c "which grit || echo 'grit not found'"
@@ -34,6 +31,7 @@ jobs:
       run: |
         docker run --rm -v ${{ github.workspace }}:/home/devkitpro/project -w /home/devkitpro/project devkitpro/devkitarm:latest bash -c "
           set -e
+          export PATH=/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:\$PATH
           echo 'Updating apt and installing dependencies...'
           apt-get update -qq
           # Try to install calico or libnds dependencies, ignore failures gracefully
