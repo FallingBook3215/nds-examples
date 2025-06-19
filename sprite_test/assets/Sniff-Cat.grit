@@ -1,3 +1,4 @@
+#define GRIT_EXPORT_C
 -W3
 -gb
 -gB16
