@@ -112,10 +112,8 @@ $(OUTPUT).elf   :   $(OFILES)
 
 -include $(DEPENDS)
 
-Sniff-Cat.h: assets/Sniff-Cat.png
-	grit assets/Sniff-Cat.png -fts -fh
-
-main.o: Sniff-Cat.h
+%.s %.h : %.png %.grit
+    grit $< -fts -o$*
 
 #---------------------------------------------------------------------------------------
 endif
