@@ -9,57 +9,55 @@ endif
 include $(DEVKITARM)/ds_rules
 
 #---------------------------------------------------------------------------------
-# Project settings
+# TARGET is the name of the output
+# BUILD is the directory for object and intermediate files
+# SOURCES is a list of directories containing source code
+# INCLUDES is a list of directories containing extra header files
+# GRAPHICS is a list of directories containing files to be processed by grit
 #---------------------------------------------------------------------------------
-TARGET      := $(shell basename $(CURDIR))
+TARGET      := $(notdir $(CURDIR))
 BUILD       := build
 SOURCES     := source
-INCLUDES    := include build
+INCLUDES    := include
+GRAPHICS    := assets
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH    := -march=armv5te -mtune=arm946e-s -mthumb
+ARCH        := -march=armv5te -mtune=arm946e-s -mthumb
 
-CFLAGS  := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH)
-CFLAGS  += $(INCLUDE) -DARM9
+CFLAGS      := -g -Wall -O2 -ffunction-sections -fdata-sections $(ARCH)
+CFLAGS      += $(INCLUDE) -DARM9
 CXXFLAGS    := $(CFLAGS) -fno-rtti -fno-exceptions
 
-ASFLAGS := -g $(ARCH)
-LDFLAGS = -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+ASFLAGS     := -g $(ARCH)
+LDFLAGS     = -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS    := -lnds9
-LIBDIRS := $(LIBNDS)
+LIBS        := -lnds9
+LIBDIRS     := $(LIBNDS)
 
 #---------------------------------------------------------------------------------
 # Asset rules
 #---------------------------------------------------------------------------------
-ASSETDIR := assets
-PNG_ASSETS := $(basename $(notdir $(wildcard $(ASSETDIR)/*.png)))
-GRIT_HEADERS := $(addprefix $(ASSETDIR)/,$(addsuffix .h,$(PNG_ASSETS)))
-GRIT_SFILES  := $(addprefix $(ASSETDIR)/,$(addsuffix .s,$(PNG_ASSETS)))
+PNGFILES    := $(foreach dir,$(GRAPHICS),$(notdir $(wildcard $(dir)/*.png)))
+GRITFILES   := $(foreach f,$(PNGFILES),$(GRAPHICS)/$(basename $(f)).grit)
 
-# Rule to generate .h and .s from .png and .grit
-$(ASSETDIR)/%.h: $(ASSETDIR)/%.png $(ASSETDIR)/%.grit
-	grit $< -fts -fh! -o$(ASSETDIR)/$*
-
-$(ASSETDIR)/%.s: $(ASSETDIR)/%.png $(ASSETDIR)/%.grit
-	grit $< -fts -fh! -o$(ASSETDIR)/$*
+# This will generate .h and .s for every .png/.grit pair
+OFILES_ASSETS := $(addprefix $(GRAPHICS)/,$(PNGFILES:.png=.o))
+HFILES_ASSETS := $(addprefix $(GRAPHICS)/,$(PNGFILES:.png=.h))
 
 #---------------------------------------------------------------------------------
 # Build system
 #---------------------------------------------------------------------------------
 ifneq ($(BUILD),$(notdir $(CURDIR)))
-# Out-of-source build
 
-export OUTPUT   := $(CURDIR)/$(TARGET)
-export VPATH    := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
-export DEPSDIR  := $(CURDIR)/$(BUILD)
+export OUTPUT    := $(CURDIR)/$(TARGET)
+export VPATH     := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) $(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir))
+export DEPSDIR   := $(CURDIR)/$(BUILD)
 
 CFILES      := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES    := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES      := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-BINFILES    := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.bin)))
 
 ifeq ($(strip $(CPPFILES)),)
     export LD := $(CC)
@@ -67,48 +65,47 @@ else
     export LD := $(CXX)
 endif
 
-export OFILES    := $(BINFILES:.bin=.o) \
-                    $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES         := $(OFILES_ASSETS) $(OFILES_SOURCES)
+export INCLUDE        := $(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir)) \
+                         $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+                         -I$(CURDIR)/$(BUILD)
+export LIBPATHS       := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-export INCLUDE   := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-                    $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-                    -I$(CURDIR)/$(BUILD)
+.PHONY: $(BUILD) clean
 
-export LIBPATHS  := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
-
-.PHONY: $(BUILD) clean assets
-
-# Ensure assets are generated before building
-$(BUILD): assets
+$(BUILD):
 	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
-
-assets: $(GRIT_HEADERS) $(GRIT_SFILES)
+	@make BUILDDIR=`cd $(BUILD) && pwd` --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
-	@rm -f $(ASSETDIR)/*.h $(ASSETDIR)/*.s
+	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds
+	@rm -f $(GRAPHICS)/*.h $(GRAPHICS)/*.s $(GRAPHICS)/*.o
 
 #---------------------------------------------------------------------------------
 else
-# In-source build
 
-DEPENDS := $(OFILES:.o=.d)
+DEPENDS     := $(OFILES:.o=.d)
 
-# Main targets
+# main targets
 $(OUTPUT).nds   :   $(OUTPUT).elf
 $(OUTPUT).elf   :   $(OFILES)
 
-# Make all object files depend on all generated headers
-$(OFILES): $(GRIT_HEADERS)
+# Rule to generate assembly and header from png/grit
+$(GRAPHICS)/%.s $(GRAPHICS)/%.h : $(GRAPHICS)/%.png $(GRAPHICS)/%.grit
+	grit $< -fts -o$*
+
+# Asset .o depends on .s
+$(GRAPHICS)/%.o : $(GRAPHICS)/%.s
+	$(AS) $(ASFLAGS) -o $@ $<
 
 -include $(DEPENDS)
 
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
-	@rm -f $(ASSETDIR)/*.h $(ASSETDIR)/*.s
+	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds
+	@rm -f $(GRAPHICS)/*.h $(GRAPHICS)/*.s $(GRAPHICS)/*.o
 
 endif
 #---------------------------------------------------------------------------------------
