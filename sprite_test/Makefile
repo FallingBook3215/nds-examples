@@ -112,8 +112,8 @@ $(OUTPUT).elf   :   $(OFILES)
 
 -include $(DEPENDS)
 
-Sniff-Cat.h: Sniff-Cat.png
-	grit Sniff-Cat.png -fts -fh
+Sniff-Cat.h: assets/Sniff-Cat.png
+	grit assets/Sniff-Cat.png -fts -fh
 
 main.o: Sniff-Cat.h
 
